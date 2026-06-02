@@ -730,12 +730,12 @@ function updateSpend(claudeCostUsd) {
     html += `
     <div class="spend-row">
       <span>Claude AI<span style="color:#475569;font-size:0.72rem;margin-left:0.5rem">planning + synthesis</span></span>
-      <span>$${claudeCostUsd.toFixed(4)} USD</span>
+      <span>$${claudeCostUsd.toFixed(2)} USD</span>
     </div>`;
   }
 
   const grandTotal = searchTotal + (claudeCostUsd || 0);
-  const totalLabel = useX402 ? `$${grandTotal.toFixed(4)}` : `$${(claudeCostUsd || 0).toFixed(4)} USD + free searches`;
+  const totalLabel = useX402 ? `$${grandTotal.toFixed(2)}` : `$${(claudeCostUsd || 0).toFixed(2)} USD + free searches`;
   html += `<div class="spend-row"><span>Total</span><span>${totalLabel}</span></div>`;
 
   document.getElementById('spendTable').innerHTML = html;
