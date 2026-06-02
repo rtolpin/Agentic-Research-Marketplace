@@ -186,12 +186,11 @@
     .spend-row:last-child { border-bottom: none; font-weight: 700; color: #e2e8f0; }
 
     .log-box {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      max-height: 220px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.8rem;
+      max-height: 200px;
       overflow-y: auto;
-      padding: 0.75rem;
+      padding: 0.75rem 1rem;
       background: #0d1117;
       border-radius: 8px;
       border: 1px solid #1e2a3a;
@@ -199,22 +198,15 @@
     }
     .log-line {
       display: flex;
-      align-items: flex-start;
-      gap: 0.6rem;
-      padding: 0.4rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.82rem;
-      line-height: 1.4;
-      background: #111827;
+      gap: 0.75rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
-    .log-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 0.05rem; }
-    .log-body { flex: 1; }
-    .log-msg { color: #cbd5e1; }
-    .log-time { font-size: 0.68rem; color: #475569; margin-top: 0.1rem; }
-    .log-line.info  { border-left: 3px solid #334155; }
-    .log-line.success { border-left: 3px solid #22c55e; background: #0d1f14; }
-    .log-line.warn  { border-left: 3px solid #f59e0b; background: #1c1608; }
-    .log-line.warn .log-msg { color: #fbbf24; }
+    .log-ts { color: #374151; flex-shrink: 0; user-select: none; }
+    .log-line.info  .log-text { color: #94a3b8; }
+    .log-line.success .log-text { color: #4ade80; }
+    .log-line.warn  .log-text { color: #fbbf24; }
 
     .spinner {
       display: inline-block;
@@ -317,7 +309,7 @@
     </div>
 
     <div class="card" id="logCard">
-      <div class="card-title">Activity</div>
+      <div class="card-title">Progress Log</div>
       <div class="log-box" id="logBox"></div>
     </div>
   </div>
@@ -389,18 +381,14 @@ async function loadStatus() {
   }
 }
 
-const LOG_ICONS = { info: 'ℹ️', success: '✅', warn: '⚠️' };
+const LOG_PREFIX = { info: '›', success: '✓', warn: '!' };
 
 function log(msg, cls = 'info') {
   const box = document.getElementById('logBox');
   const line = document.createElement('div');
   line.className = `log-line ${cls}`;
-  line.innerHTML = `
-    <span class="log-icon">${LOG_ICONS[cls] || 'ℹ️'}</span>
-    <div class="log-body">
-      <div class="log-msg">${escHtml(msg)}</div>
-      <div class="log-time">${new Date().toLocaleTimeString()}</div>
-    </div>`;
+  const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  line.innerHTML = `<span class="log-ts">${t}</span><span class="log-text">${LOG_PREFIX[cls]} ${escHtml(msg)}</span>`;
   box.appendChild(line);
   box.scrollTop = box.scrollHeight;
 }
