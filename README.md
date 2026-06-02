@@ -8,6 +8,12 @@ Ask a question like *"Should I expand my coffee business into Japan?"* and a tea
 
 ---
 
+## Live Demo
+
+### [https://agentic-research-marketplace-production.up.railway.app](https://agentic-research-marketplace-production.up.railway.app)
+
+---
+
 ## How It Works
 
 1. **Orchestrator** — Claude breaks your question into 3–5 focused research sub-tasks (e.g. Market Size, Regulatory Environment, Competitor Analysis)
