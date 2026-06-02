@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agentic Research Marketplace</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #a78bfa;
+      margin-bottom: 0.25rem;
+    }
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
+
+    .input-row {
+      display: flex; gap: 0.75rem; margin-bottom: 2rem;
+    }
+    #intent {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: #1e2130;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 1rem;
+      outline: none;
+    }
+    #intent:focus { border-color: #7c3aed; }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #6d28d9; }
+
+    .status-bar {
+      display: flex; gap: 1.5rem;
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .status-bar span { display: flex; align-items: center; gap: 0.3rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-on { background: #14532d; color: #4ade80; }
+    .badge-off { background: #1e293b; color: #64748b; }
+
+    #output { display: none; }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7c3aed;
+      margin-bottom: 0.75rem;
+    }
+
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.6rem;
+    }
+    .plan-chip {
+      background: #0f1117;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+    }
+    .plan-chip .role { font-weight: 700; color: #a78bfa; }
+    .plan-chip .q { color: #94a3b8; margin-top: 0.2rem; font-size: 0.75rem; }
+
+    .worker-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .worker {
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+    }
+    .worker-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 0.5rem;
+    }
+    .worker-title { font-weight: 700; font-size: 0.9rem; }
+    .worker-meta { font-size: 0.75rem; color: #64748b; text-align: right; }
+    .service-tag {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-left: 0.3rem;
+    }
+    .tag-discovered { background: #1e3a5f; color: #60a5fa; }
+    .tag-default { background: #1c2a1c; color: #4ade80; }
+
+    .tx-link {
+      display: inline-block;
+      font-size: 0.72rem;
+      color: #7c3aed;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .tx-link:hover { text-decoration: underline; }
+
+    .finding { padding: 0.4rem 0; border-top: 1px solid #1e2130; }
+    .finding:first-child { border-top: none; }
+    .finding a { color: #93c5fd; font-size: 0.82rem; text-decoration: none; }
+    .finding a:hover { text-decoration: underline; }
+    .finding .snippet { color: #64748b; font-size: 0.75rem; margin-top: 0.15rem; }
+    .findings-toggle { font-size: 0.75rem; color: #7c3aed; cursor: pointer; margin-top: 0.5rem; }
+
+    .answer-text {
+      line-height: 1.7;
+      font-size: 0.92rem;
+      color: #cbd5e1;
+    }
+    .answer-text a { color: #93c5fd; }
+
+    .spend-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; color: #94a3b8;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid #1e2130;
+    }
+    .spend-row:last-child { border-bottom: none; font-weight: 700; color: #e2e8f0; }
+
+    .log-box {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.72rem;
+      color: #64748b;
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 0.5rem;
+      background: #080b10;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+    }
+    .log-line { margin-bottom: 0.15rem; }
+    .log-line.info { color: #94a3b8; }
+    .log-line.success { color: #4ade80; }
+    .log-line.warn { color: #fbbf24; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #334155;
+      border-top-color: #7c3aed;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .input-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Agentic Research Marketplace</h1>
+  <p class="subtitle">x402 micropayments · CDP wallet · Bazaar discovery · Base mainnet</p>
+
+  <div class="status-bar" id="statusBar">
+    <span>Loading status...</span>
+  </div>
+
+  <div class="input-row">
+    <input id="intent" type="text" placeholder="Should I expand my coffee business into Japan?"
+           value="Should I expand my coffee business into Japan?" />
+    <button id="runBtn" onclick="startRun()">Research</button>
+  </div>
+
+  <div id="output">
+    <div class="card" id="planCard" style="display:none">
+      <div class="card-title">Research Plan</div>
+      <div class="plan-grid" id="planGrid"></div>
+    </div>
+
+    <div class="card" id="workersCard" style="display:none">
+      <div class="card-title">Worker Agents</div>
+      <div class="worker-list" id="workerList"></div>
+    </div>
+
+    <div class="card" id="spendCard" style="display:none">
+      <div class="card-title">Spend Breakdown</div>
+      <div id="spendTable"></div>
+    </div>
+
+    <div class="card" id="answerCard" style="display:none">
+      <div class="card-title">AI Analysis &amp; Recommendations</div>
+      <div class="answer-text" id="answerText"></div>
+    </div>
+
+    <div class="card" id="logCard">
+      <div class="card-title">Console Log</div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let running = false;
+const workers = {};
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const s = await r.json();
+    const bar = document.getElementById('statusBar');
+    bar.innerHTML = `
+      <span>Wallet: <code style="color:#a78bfa">${s.walletAddress.slice(0,8)}…${s.walletAddress.slice(-4)}</code></span>
+      <span>Spent: <b style="color:#4ade80">$${s.totalSpend.toFixed(4)}</b> / $${s.maxSpend.toFixed(2)}</span>
+      <span>x402 <span class="badge ${s.flags.USE_X402 ? 'badge-on' : 'badge-off'}">${s.flags.USE_X402 ? 'ON' : 'OFF'}</span></span>
+      <span>Discovery <span class="badge ${s.flags.USE_DISCOVERY ? 'badge-on' : 'badge-off'}">${s.flags.USE_DISCOVERY ? 'ON' : 'OFF'}</span></span>
+      <span>Max agents: ${s.flags.MAX_AGENTS}</span>
+    `;
+  } catch (e) {
+    document.getElementById('statusBar').textContent = 'Status unavailable';
+  }
+}
+
+function log(msg, cls = 'info') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = `log-line ${cls}`;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function startRun() {
+  if (running) return;
+  const intent = document.getElementById('intent').value.trim();
+  if (!intent) return;
+
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('planCard').style.display = 'none';
+  document.getElementById('workersCard').style.display = 'none';
+  document.getElementById('spendCard').style.display = 'none';
+  document.getElementById('answerCard').style.display = 'none';
+  document.getElementById('planGrid').innerHTML = '';
+  document.getElementById('workerList').innerHTML = '';
+  document.getElementById('spendTable').innerHTML = '';
+  document.getElementById('answerText').innerHTML = '';
+  document.getElementById('logBox').innerHTML = '';
+  Object.keys(workers).forEach(k => delete workers[k]);
+
+  log(`Starting: "${intent}"`);
+
+  const url = `/api/run?intent=${encodeURIComponent(intent)}`;
+  const es = new EventSource(url);
+
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    handleUpdate(data);
+    if (data.type === 'done' || data.type === 'close' || data.type === 'error') {
+      es.close();
+      running = false;
+      document.getElementById('runBtn').disabled = false;
+      loadStatus();
+    }
+  };
+
+  es.onerror = () => {
+    log('Connection error', 'warn');
+    es.close();
+    running = false;
+    document.getElementById('runBtn').disabled = false;
+  };
+}
+
+function handleUpdate(data) {
+  switch (data.type) {
+    case 'planning':
+      log('Planning research tasks…');
+      break;
+
+    case 'plan_ready': {
+      const grid = document.getElementById('planGrid');
+      grid.innerHTML = '';
+      data.tasks.forEach((t, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'plan-chip';
+        chip.innerHTML = `<div class="role">${escHtml(t.role)}</div><div class="q">${escHtml(t.subQuestion)}</div>`;
+        grid.appendChild(chip);
+      });
+      document.getElementById('planCard').style.display = 'block';
+      log(`Plan: ${data.tasks.length} agents`);
+      break;
+    }
+
+    case 'worker_start': {
+      const list = document.getElementById('workerList');
+      const tagClass = data.serviceSource === 'discovered' ? 'tag-discovered' : 'tag-default';
+      const tagText = data.serviceSource === 'discovered' ? 'discovered' : 'default';
+      const div = document.createElement('div');
+      div.className = 'worker';
+      div.id = `worker-${data.taskIndex}`;
+      div.innerHTML = `
+        <div class="worker-header">
+          <div class="worker-title"><span class="spinner"></span>${escHtml(data.role)}</div>
+          <div class="worker-meta">
+            ${escHtml(data.service)}
+            <span class="service-tag ${tagClass}">${tagText}</span>
+          </div>
+        </div>
+        <div class="worker-findings" id="wf-${data.taskIndex}">Searching…</div>
+      `;
+      list.appendChild(div);
+      document.getElementById('workersCard').style.display = 'block';
+      log(`Worker ${data.taskIndex} (${data.role}) → ${data.service} [${data.serviceSource}]`);
+      break;
+    }
+
+    case 'worker_done': {
+      const r = data.result;
+      const container = document.getElementById(`worker-${r.taskIndex}`);
+      if (!container) break;
+
+      // Remove spinner
+      const spinner = container.querySelector('.spinner');
+      if (spinner) spinner.remove();
+
+      const wf = document.getElementById(`wf-${r.taskIndex}`);
+      const topFindings = r.findings.slice(0, 3);
+      let html = topFindings.map(f =>
+        `<div class="finding"><a href="${escHtml(f.url)}" target="_blank">${escHtml(f.title)}</a>
+         <div class="snippet">${escHtml((f.content || '').slice(0, 120))}…</div></div>`
+      ).join('');
+
+      if (r.txHashes.length) {
+        html += `<div style="margin-top:0.5rem">${r.txHashes.map(h =>
+          `<a class="tx-link" href="https://basescan.org/tx/${h}" target="_blank">⛓ ${h.slice(0,10)}…${h.slice(-6)}</a>`
+        ).join(' ')}</div>`;
+      }
+      if (!topFindings.length) html = '<div style="color:#64748b;font-size:0.8rem">No results</div>';
+      wf.innerHTML = html;
+
+      workers[r.taskIndex] = r;
+      updateSpend();
+      log(`Worker ${r.taskIndex} done: ${r.findings.length} results, $${r.spend.toFixed(4)}`, 'success');
+      break;
+    }
+
+    case 'synthesizing':
+      log('Synthesizing answer…');
+      break;
+
+    case 'done': {
+      const res = data.result;
+      const answerEl = document.getElementById('answerText');
+      answerEl.innerHTML = renderMarkdown(res.answer);
+      document.getElementById('answerCard').style.display = 'block';
+      log('Done!', 'success');
+      break;
+    }
+
+    case 'error':
+      log(`Error: ${data.message}`, 'warn');
+      break;
+  }
+}
+
+function updateSpend() {
+  const rows = Object.values(workers);
+  if (!rows.length) return;
+  const total = rows.reduce((s, r) => s + (r.spend || 0), 0);
+  let html = rows.map(r => `
+    <div class="spend-row">
+      <span>${escHtml(r.task?.role || `Worker ${r.taskIndex}`)}</span>
+      <span>$${(r.spend || 0).toFixed(4)} · ${r.serviceUsed || '—'}</span>
+    </div>`).join('');
+  html += `<div class="spend-row"><span>Total</span><span>$${total.toFixed(4)}</span></div>`;
+  document.getElementById('spendTable').innerHTML = html;
+  document.getElementById('spendCard').style.display = 'block';
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderMarkdown(text) {
+  const lines = String(text ?? '').split('\n');
+  let html = '';
+  for (const line of lines) {
+    let l = line
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+      // links
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+      // bold
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      // italic
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    if (/^### /.test(line)) {
+      html += `<h4 style="color:#a78bfa;margin:1rem 0 0.4rem;font-size:0.9rem">${l.replace(/^### /, '')}</h4>`;
+    } else if (/^## /.test(line)) {
+      html += `<h3 style="color:#a78bfa;margin:1.2rem 0 0.5rem;font-size:1rem">${l.replace(/^## /, '')}</h3>`;
+    } else if (/^# /.test(line)) {
+      html += `<h2 style="color:#c4b5fd;margin:1.2rem 0 0.5rem;font-size:1.1rem">${l.replace(/^# /, '')}</h2>`;
+    } else if (/^- /.test(line) || /^\* /.test(line)) {
+      html += `<div style="padding:0.15rem 0 0.15rem 1rem">• ${l.replace(/^[-*] /, '')}</div>`;
+    } else if (l.trim() === '') {
+      html += '<div style="height:0.6rem"></div>';
+    } else {
+      html += `<div>${l}</div>`;
+    }
+  }
+  return html;
+}
+
+loadStatus();
+</script>
+</body>
+</html>
