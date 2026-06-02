@@ -77,6 +77,28 @@
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     button:hover:not(:disabled) { background: #6d28d9; }
 
+    #searchPanel { margin-bottom: 2rem; }
+
+    .new-search-btn {
+      display: none;
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1.5rem;
+      background: transparent;
+      border: 1px dashed #334155;
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .new-search-btn:hover:not(:disabled) {
+      border-color: #7c3aed;
+      color: #a78bfa;
+      background: #1e1a2e;
+    }
+
     .status-bar {
       display: flex; gap: 1.5rem;
       font-size: 0.78rem;
@@ -275,7 +297,22 @@
     <span>Loading status...</span>
   </div>
 
-  <div id="output">
+  <div id="searchPanel">
+    <div class="location-row" id="locationRow">
+      <span class="location-icon">📍</span>
+      <span id="locationText" class="location-text">Location not set</span>
+      <button class="location-btn" onclick="detectLocation()">Detect my location</button>
+    </div>
+    <div class="input-row">
+      <input id="intent" type="text" placeholder="Should I expand my coffee business into Japan?"
+             value="Should I expand my coffee business into Japan?" />
+      <button id="runBtn" onclick="startRun()">Research</button>
+    </div>
+  </div>
+
+  <div id="output" style="display:none">
+    <button class="new-search-btn" id="newSearchBtn" onclick="resetSearch()">+ Start Another Search</button>
+
     <div class="card" id="answerCard" style="display:none">
       <div class="card-title">AI Analysis &amp; Recommendations</div>
       <div class="answer-text" id="answerText"></div>
@@ -301,24 +338,19 @@
       <div class="log-box" id="logBox"></div>
     </div>
   </div>
-
-  <div class="location-row" id="locationRow">
-    <span class="location-icon">📍</span>
-    <span id="locationText" class="location-text">Location not set</span>
-    <button class="location-btn" onclick="detectLocation()">Detect my location</button>
-  </div>
-
-  <div class="input-row">
-    <input id="intent" type="text" placeholder="Should I expand my coffee business into Japan?"
-           value="Should I expand my coffee business into Japan?" />
-    <button id="runBtn" onclick="startRun()">Research</button>
-  </div>
 </div>
 
 <script>
 let running = false;
 const workers = {};
 let userLocation = '';
+
+function resetSearch() {
+  document.getElementById('output').style.display = 'none';
+  document.getElementById('searchPanel').style.display = 'block';
+  document.getElementById('intent').focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 async function detectLocation() {
   const btn = document.querySelector('.location-btn');
@@ -400,7 +432,9 @@ function startRun() {
 
   running = true;
   document.getElementById('runBtn').disabled = true;
+  document.getElementById('searchPanel').style.display = 'none';
   document.getElementById('output').style.display = 'block';
+  document.getElementById('newSearchBtn').style.display = 'block';
   document.getElementById('planCard').style.display = 'none';
   document.getElementById('workersCard').style.display = 'none';
   document.getElementById('spendCard').style.display = 'none';
@@ -425,6 +459,7 @@ function startRun() {
       es.close();
       running = false;
       document.getElementById('runBtn').disabled = false;
+      document.getElementById('newSearchBtn').style.display = 'block';
       loadStatus();
     }
   };
