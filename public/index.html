@@ -275,6 +275,33 @@
     <span>Loading status...</span>
   </div>
 
+  <div id="output">
+    <div class="card" id="answerCard" style="display:none">
+      <div class="card-title">AI Analysis &amp; Recommendations</div>
+      <div class="answer-text" id="answerText"></div>
+    </div>
+
+    <div class="card" id="workersCard" style="display:none">
+      <div class="card-title">Worker Agents</div>
+      <div class="worker-list" id="workerList"></div>
+    </div>
+
+    <div class="card" id="planCard" style="display:none">
+      <div class="card-title">Research Plan</div>
+      <div class="plan-grid" id="planGrid"></div>
+    </div>
+
+    <div class="card" id="spendCard" style="display:none">
+      <div class="card-title">Spend Breakdown</div>
+      <div id="spendTable"></div>
+    </div>
+
+    <div class="card" id="logCard">
+      <div class="card-title">Progress Log</div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
   <div class="location-row" id="locationRow">
     <span class="location-icon">📍</span>
     <span id="locationText" class="location-text">Location not set</span>
@@ -285,33 +312,6 @@
     <input id="intent" type="text" placeholder="Should I expand my coffee business into Japan?"
            value="Should I expand my coffee business into Japan?" />
     <button id="runBtn" onclick="startRun()">Research</button>
-  </div>
-
-  <div id="output">
-    <div class="card" id="planCard" style="display:none">
-      <div class="card-title">Research Plan</div>
-      <div class="plan-grid" id="planGrid"></div>
-    </div>
-
-    <div class="card" id="workersCard" style="display:none">
-      <div class="card-title">Worker Agents</div>
-      <div class="worker-list" id="workerList"></div>
-    </div>
-
-    <div class="card" id="spendCard" style="display:none">
-      <div class="card-title">Spend Breakdown</div>
-      <div id="spendTable"></div>
-    </div>
-
-    <div class="card" id="answerCard" style="display:none">
-      <div class="card-title">AI Analysis &amp; Recommendations</div>
-      <div class="answer-text" id="answerText"></div>
-    </div>
-
-    <div class="card" id="logCard">
-      <div class="card-title">Progress Log</div>
-      <div class="log-box" id="logBox"></div>
-    </div>
   </div>
 </div>
 
@@ -411,6 +411,7 @@ function startRun() {
   document.getElementById('answerText').innerHTML = '';
   document.getElementById('logBox').innerHTML = '';
   Object.keys(workers).forEach(k => delete workers[k]);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
   log(`Researching: "${intent}"${userLocation ? ` · 📍 ${userLocation}` : ''}`);
 
@@ -522,7 +523,7 @@ function handleUpdate(data) {
           <div class="synth-sub">Claude is reading all research findings and writing your answer</div>
           <div class="synth-dots"><span></span><span></span><span></span></div>
         </div>`;
-      document.getElementById('answerCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       log('All agents done — Claude is writing your analysis…');
       break;
     }
