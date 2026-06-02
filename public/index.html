@@ -349,9 +349,10 @@
     <div class="location-row" id="locationRow">
       <span class="location-icon">📍</span>
       <span id="locationText" class="location-text" style="display:none">Location not set</span>
+      <span id="locationSizer" style="position:absolute;visibility:hidden;white-space:pre;font-size:0.75rem;padding:0 0.4rem;pointer-events:none"></span>
       <input id="locationInput" type="text" placeholder="City…"
-             style="width:110px;padding:0.2rem 0.4rem;background:#1e2130;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:0.75rem;outline:none"
-             oninput="setManualLocation(this.value)"
+             style="min-width:60px;max-width:220px;width:60px;padding:0.2rem 0.4rem;background:#1e2130;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:0.75rem;outline:none"
+             oninput="setManualLocation(this.value);sizeLocationInput()"
              onfocus="this.style.borderColor='#2563eb'"
              onblur="this.style.borderColor='#334155'" />
       <button class="location-btn" onclick="detectLocation()">Detect</button>
@@ -416,6 +417,13 @@ function resetSearch() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function sizeLocationInput() {
+  const input = document.getElementById('locationInput');
+  const sizer = document.getElementById('locationSizer');
+  sizer.textContent = input.value || input.placeholder;
+  input.style.width = Math.min(Math.max(sizer.offsetWidth + 8, 60), 220) + 'px';
+}
+
 function setManualLocation(val) {
   userLocation = val.trim();
 }
@@ -428,6 +436,7 @@ function applyLocation(city) {
   input.style.borderColor = '#22c55e';
   btn.textContent = 'Detect';
   btn.disabled = false;
+  sizeLocationInput();
 }
 
 async function ipFallback() {
@@ -446,6 +455,7 @@ async function ipFallback() {
       input.select();
       btn.textContent = 'Detect';
       btn.disabled = false;
+      sizeLocationInput();
       return;
     }
   } catch {}
