@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Agentic Research Marketplace with x402 micropayments on Base",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
