@@ -352,8 +352,7 @@
       <button class="location-btn" onclick="detectLocation()">Detect my location</button>
     </div>
     <div class="input-row">
-      <input id="intent" type="text" placeholder="Should I expand my coffee business into Japan?"
-             value="Should I expand my coffee business into Japan?" />
+      <input id="intent" type="text" placeholder="Ask a complex research question…" />
       <button id="runBtn" onclick="startRun()">Research</button>
     </div>
   </div>
@@ -715,6 +714,30 @@ function renderMarkdown(text) {
   }
   return html;
 }
+
+const EXAMPLE_QUERIES = [
+  'Should I expand my coffee business into Japan?',
+  'Is it a good time to invest in electric vehicle stocks?',
+  'Should I leave my corporate job to start a fintech startup?',
+  'AWS, GCP, or Azure for an early-stage AI startup?',
+  'Is it better to buy or rent in Miami right now?',
+  'Should I build my app\'s backend in Go or Rust?',
+  'What are the key risks of launching a food delivery startup in Chicago?',
+  'Where can I buy a nice suit and tie near me?',
+  'What is the current state of the quantum computing market?',
+  'Should I raise a seed round or bootstrap my startup?',
+];
+
+(function rotatePlaceholder() {
+  const input = document.getElementById('intent');
+  let idx = 0;
+  setInterval(() => {
+    if (document.activeElement === input || input.value) return;
+    idx = (idx + 1) % EXAMPLE_QUERIES.length;
+    input.placeholder = EXAMPLE_QUERIES[idx];
+  }, 3000);
+})();
+
 
 loadStatus();
 </script>
