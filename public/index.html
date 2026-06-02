@@ -186,20 +186,35 @@
     .spend-row:last-child { border-bottom: none; font-weight: 700; color: #e2e8f0; }
 
     .log-box {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.72rem;
-      color: #64748b;
-      max-height: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      max-height: 220px;
       overflow-y: auto;
-      padding: 0.5rem;
-      background: #080b10;
-      border-radius: 6px;
+      padding: 0.75rem;
+      background: #0d1117;
+      border-radius: 8px;
+      border: 1px solid #1e2a3a;
       margin-top: 0.5rem;
     }
-    .log-line { margin-bottom: 0.15rem; }
-    .log-line.info { color: #94a3b8; }
-    .log-line.success { color: #4ade80; }
-    .log-line.warn { color: #fbbf24; }
+    .log-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      background: #111827;
+    }
+    .log-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 0.05rem; }
+    .log-body { flex: 1; }
+    .log-msg { color: #cbd5e1; }
+    .log-time { font-size: 0.68rem; color: #475569; margin-top: 0.1rem; }
+    .log-line.info  { border-left: 3px solid #334155; }
+    .log-line.success { border-left: 3px solid #22c55e; background: #0d1f14; }
+    .log-line.warn  { border-left: 3px solid #f59e0b; background: #1c1608; }
+    .log-line.warn .log-msg { color: #fbbf24; }
 
     .spinner {
       display: inline-block;
@@ -302,7 +317,7 @@
     </div>
 
     <div class="card" id="logCard">
-      <div class="card-title">Console Log</div>
+      <div class="card-title">Activity</div>
       <div class="log-box" id="logBox"></div>
     </div>
   </div>
@@ -374,11 +389,18 @@ async function loadStatus() {
   }
 }
 
+const LOG_ICONS = { info: 'ℹ️', success: '✅', warn: '⚠️' };
+
 function log(msg, cls = 'info') {
   const box = document.getElementById('logBox');
   const line = document.createElement('div');
   line.className = `log-line ${cls}`;
-  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  line.innerHTML = `
+    <span class="log-icon">${LOG_ICONS[cls] || 'ℹ️'}</span>
+    <div class="log-body">
+      <div class="log-msg">${escHtml(msg)}</div>
+      <div class="log-time">${new Date().toLocaleTimeString()}</div>
+    </div>`;
   box.appendChild(line);
   box.scrollTop = box.scrollHeight;
 }
@@ -402,7 +424,7 @@ function startRun() {
   document.getElementById('logBox').innerHTML = '';
   Object.keys(workers).forEach(k => delete workers[k]);
 
-  log(`Starting: "${intent}"${userLocation ? ` · 📍 ${userLocation}` : ''}`);
+  log(`Researching: "${intent}"${userLocation ? ` · 📍 ${userLocation}` : ''}`);
 
   const url = `/api/run?intent=${encodeURIComponent(intent)}${userLocation ? `&location=${encodeURIComponent(userLocation)}` : ''}`;
   const es = new EventSource(url);
@@ -419,7 +441,7 @@ function startRun() {
   };
 
   es.onerror = () => {
-    log('Connection error', 'warn');
+    log('Connection lost — please try again', 'warn');
     es.close();
     running = false;
     document.getElementById('runBtn').disabled = false;
@@ -429,7 +451,7 @@ function startRun() {
 function handleUpdate(data) {
   switch (data.type) {
     case 'planning':
-      log('Planning research tasks…');
+      log('Claude is planning your research…');
       break;
 
     case 'plan_ready': {
@@ -442,7 +464,7 @@ function handleUpdate(data) {
         grid.appendChild(chip);
       });
       document.getElementById('planCard').style.display = 'block';
-      log(`Plan: ${data.tasks.length} agents`);
+      log(`Research plan ready — ${data.tasks.length} specialist agents assigned`);
       break;
     }
 
@@ -469,7 +491,7 @@ function handleUpdate(data) {
       `;
       list.appendChild(div);
       document.getElementById('workersCard').style.display = 'block';
-      log(`Worker ${data.taskIndex} (${data.role}) → ${data.service} [${data.serviceSource}]`);
+      log(`Agent "${data.role}" searching via ${data.service}${data.serviceCategory && data.serviceCategory !== 'general' ? ` [${data.serviceCategory}]` : ''}`);
       break;
     }
 
@@ -499,7 +521,7 @@ function handleUpdate(data) {
 
       workers[r.taskIndex] = r;
       updateSpend(null);
-      log(`Worker ${r.taskIndex} done: ${r.findings.length} results, $${r.spend.toFixed(4)}`, 'success');
+      log(`"${r.task?.role}" found ${r.findings.length} sources across ${r.queriesRun} ${r.queriesRun === 1 ? 'query' : 'queries'}`, 'success');
       break;
     }
 
@@ -513,7 +535,7 @@ function handleUpdate(data) {
           <div class="synth-dots"><span></span><span></span><span></span></div>
         </div>`;
       document.getElementById('answerCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      log('Synthesizing answer…');
+      log('All agents done — Claude is writing your analysis…');
       break;
     }
 
@@ -523,7 +545,7 @@ function handleUpdate(data) {
       answerEl.innerHTML = renderMarkdown(res.answer);
       document.getElementById('answerCard').style.display = 'block';
       updateSpend(res.claudeCostUsd ?? null);
-      log('Done!', 'success');
+      log('Analysis complete — see your results above', 'success');
       break;
     }
 
