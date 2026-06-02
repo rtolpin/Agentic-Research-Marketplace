@@ -29,6 +29,14 @@ Rules:
 - If a user location was provided, prioritize locally relevant results and call them out explicitly
 - Be direct — this is for decision-making, not academic writing`;
 
+// claude-sonnet-4-6 pricing: $3/M input, $15/M output
+const COST_PER_INPUT_TOKEN = 3 / 1_000_000;
+const COST_PER_OUTPUT_TOKEN = 15 / 1_000_000;
+
+function tokenCost(usage: { input_tokens: number; output_tokens: number }): number {
+  return usage.input_tokens * COST_PER_INPUT_TOKEN + usage.output_tokens * COST_PER_OUTPUT_TOKEN;
+}
+
 export interface WorkerFinding {
   taskIndex: number;
   role: string;
@@ -39,8 +47,9 @@ export interface WorkerFinding {
   txHashes: string[];
 }
 
-export async function plan(intent: string, location?: string): Promise<ResearchTask[]> {
+export async function plan(intent: string, location?: string): Promise<{ tasks: ResearchTask[]; costUsd: number }> {
   let tasks: ResearchTask[] = [];
+  let costUsd = 0;
   const locationLine = location ? `User location: ${location}\n` : '';
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -56,6 +65,7 @@ export async function plan(intent: string, location?: string): Promise<ResearchT
       ],
     });
 
+    costUsd += tokenCost(msg.usage);
     const raw = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
 
     try {
@@ -80,14 +90,14 @@ export async function plan(intent: string, location?: string): Promise<ResearchT
 
   // Hard backstop: never spawn more than MAX_AGENTS
   tasks = tasks.slice(0, MAX_AGENTS);
-  return tasks;
+  return { tasks, costUsd };
 }
 
 export async function synthesize(
   intent: string,
   workerFindings: WorkerFinding[],
   location?: string,
-): Promise<string> {
+): Promise<{ answer: string; costUsd: number }> {
   const findingsText = workerFindings
     .map((wf) => {
       const sources = wf.findings
@@ -110,5 +120,6 @@ export async function synthesize(
     ],
   });
 
-  return msg.content[0].type === 'text' ? msg.content[0].text : '(synthesis failed)';
+  const answer = msg.content[0].type === 'text' ? msg.content[0].text : '(synthesis failed)';
+  return { answer, costUsd: tokenCost(msg.usage) };
 }

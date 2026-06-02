@@ -23,6 +23,7 @@ export interface WorkerResult {
   task: ResearchTask;
   findings: Finding[];
   spend: number;
+  queriesRun: number;
   txHashes: string[];
   serviceUsed: string;
   serviceSource: 'discovered' | 'default';
@@ -49,6 +50,7 @@ export interface IntentResult {
   workerResults: WorkerResult[];
   answer: string;
   totalSpend: number;
+  claudeCostUsd: number;
   walletAddress: string;
 }
 

@@ -31,8 +31,9 @@ export async function runIntent(
   // 1. Plan
   emit({ type: 'planning' });
   console.log(`\n[runIntent] Planning for: "${intent}"${location ? ` (location: ${location})` : ''}`);
-  const tasks = await plan(intent, location);
-  console.log(`[runIntent] Plan: ${tasks.length} tasks`);
+  const { tasks, costUsd: planCost } = await plan(intent, location);
+  let claudeCostUsd = planCost;
+  console.log(`[runIntent] Plan: ${tasks.length} tasks, Claude cost: $${planCost.toFixed(4)}`);
   tasks.forEach((t, i) => console.log(`  [${i}] ${t.role}: ${t.subQuestion}`));
   emit({ type: 'plan_ready', tasks });
 
@@ -75,10 +76,11 @@ export async function runIntent(
     txHashes: wr.txHashes,
   }));
 
-  const answer = await synthesize(intent, workerFindings, location);
+  const { answer, costUsd: synthCost } = await synthesize(intent, workerFindings, location);
+  claudeCostUsd += synthCost;
 
   const totalSpend = ledger.getTotalSpend();
-  console.log(`[runIntent] Done. Total spend: $${totalSpend.toFixed(4)}`);
+  console.log(`[runIntent] Done. Search spend: $${totalSpend.toFixed(4)}, Claude cost: $${claudeCostUsd.toFixed(4)}`);
 
   const intentResult: IntentResult = {
     intent,
@@ -86,6 +88,7 @@ export async function runIntent(
     workerResults,
     answer,
     totalSpend,
+    claudeCostUsd,
     walletAddress,
   };
 

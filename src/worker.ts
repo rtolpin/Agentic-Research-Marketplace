@@ -29,6 +29,7 @@ export async function runWorker(
   const findings: Finding[] = [];
   const txHashes: string[] = [];
   let spend = 0;
+  let queriesRun = 0;
 
   const queries = task.queries.slice(0, MAX_QUERIES_PER_WORKER);
 
@@ -49,6 +50,7 @@ export async function runWorker(
       const newFindings = parseTavilyResults(result.data);
       findings.push(...newFindings);
       spend += result.costUsd;
+      queriesRun++;
       if (result.txHash) txHashes.push(result.txHash);
 
       console.log(`[${workerId}] Got ${newFindings.length} results, cost: $${result.costUsd.toFixed(4)}`);
@@ -66,6 +68,7 @@ export async function runWorker(
     task,
     findings,
     spend,
+    queriesRun,
     txHashes,
     serviceUsed: service.name,
     serviceSource: service.source,

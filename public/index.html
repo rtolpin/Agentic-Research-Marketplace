@@ -357,6 +357,7 @@ async function loadStatus() {
   try {
     const r = await fetch('/api/status');
     const s = await r.json();
+    window._statusFlags = s.flags;
     const bar = document.getElementById('statusBar');
     bar.innerHTML = `
       <span>Wallet: <code style="color:#a78bfa">${s.walletAddress.slice(0,8)}…${s.walletAddress.slice(-4)}</code></span>
@@ -490,7 +491,7 @@ function handleUpdate(data) {
       wf.innerHTML = html;
 
       workers[r.taskIndex] = r;
-      updateSpend();
+      updateSpend(null);
       log(`Worker ${r.taskIndex} done: ${r.findings.length} results, $${r.spend.toFixed(4)}`, 'success');
       break;
     }
@@ -514,6 +515,7 @@ function handleUpdate(data) {
       const answerEl = document.getElementById('answerText');
       answerEl.innerHTML = renderMarkdown(res.answer);
       document.getElementById('answerCard').style.display = 'block';
+      updateSpend(res.claudeCostUsd ?? null);
       log('Done!', 'success');
       break;
     }
@@ -524,16 +526,36 @@ function handleUpdate(data) {
   }
 }
 
-function updateSpend() {
+function updateSpend(claudeCostUsd) {
   const rows = Object.values(workers);
   if (!rows.length) return;
-  const total = rows.reduce((s, r) => s + (r.spend || 0), 0);
-  let html = rows.map(r => `
+  const useX402 = window._statusFlags?.USE_X402 === true;
+  const searchTotal = rows.reduce((s, r) => s + (r.spend || 0), 0);
+
+  let html = rows.map(r => {
+    const costLabel = useX402
+      ? `$${(r.spend || 0).toFixed(4)} USDC`
+      : `Free (Tavily dev key)`;
+    const meta = `${r.queriesRun ?? '?'} quer${(r.queriesRun ?? 0) === 1 ? 'y' : 'ies'} · ${r.findings?.length ?? 0} results`;
+    return `
     <div class="spend-row">
-      <span>${escHtml(r.task?.role || `Worker ${r.taskIndex}`)}</span>
-      <span>$${(r.spend || 0).toFixed(4)} · ${r.serviceUsed || '—'}</span>
-    </div>`).join('');
-  html += `<div class="spend-row"><span>Total</span><span>$${total.toFixed(4)}</span></div>`;
+      <span>${escHtml(r.task?.role || `Worker ${r.taskIndex}`)}<span style="color:#475569;font-size:0.72rem;margin-left:0.5rem">${meta}</span></span>
+      <span>${costLabel} · ${escHtml(r.serviceUsed || '—')}</span>
+    </div>`;
+  }).join('');
+
+  if (claudeCostUsd != null) {
+    html += `
+    <div class="spend-row">
+      <span>Claude AI<span style="color:#475569;font-size:0.72rem;margin-left:0.5rem">planning + synthesis</span></span>
+      <span>$${claudeCostUsd.toFixed(4)} USD</span>
+    </div>`;
+  }
+
+  const grandTotal = searchTotal + (claudeCostUsd || 0);
+  const totalLabel = useX402 ? `$${grandTotal.toFixed(4)}` : `$${(claudeCostUsd || 0).toFixed(4)} USD + free searches`;
+  html += `<div class="spend-row"><span>Total</span><span>${totalLabel}</span></div>`;
+
   document.getElementById('spendTable').innerHTML = html;
   document.getElementById('spendCard').style.display = 'block';
 }
