@@ -348,8 +348,13 @@
   <div id="searchPanel">
     <div class="location-row" id="locationRow">
       <span class="location-icon">📍</span>
-      <span id="locationText" class="location-text">Location not set</span>
-      <button class="location-btn" onclick="detectLocation()">Detect my location</button>
+      <span id="locationText" class="location-text" style="display:none">Location not set</span>
+      <input id="locationInput" type="text" placeholder="Enter city (e.g. New York, Chicago…)"
+             style="flex:1;padding:0.3rem 0.6rem;background:#1e2130;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:0.8rem;outline:none"
+             oninput="setManualLocation(this.value)"
+             onfocus="this.style.borderColor='#2563eb'"
+             onblur="this.style.borderColor='#334155'" />
+      <button class="location-btn" onclick="detectLocation()">Detect</button>
     </div>
     <div class="input-row">
       <input id="intent" type="text" placeholder="Ask a complex research question…"
@@ -411,21 +416,26 @@ function resetSearch() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function setManualLocation(val) {
+  userLocation = val.trim();
+}
+
 async function detectLocation() {
   const btn = document.querySelector('.location-btn');
-  const txt = document.getElementById('locationText');
+  const input = document.getElementById('locationInput');
   btn.textContent = 'Detecting…';
   btn.disabled = true;
 
   if (!navigator.geolocation) {
-    txt.textContent = 'Geolocation not supported';
-    btn.textContent = 'Detect my location';
+    input.placeholder = 'Geolocation not supported — type your city above';
+    btn.textContent = 'Detect';
     btn.disabled = false;
     return;
   }
 
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const { latitude, longitude } = pos.coords;
+    let resolved = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
@@ -435,22 +445,16 @@ async function detectLocation() {
       const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
       const state = data.address?.state || '';
       const country = data.address?.country_code?.toUpperCase() || '';
-      userLocation = [city, state, country].filter(Boolean).join(', ') || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
-    } catch {
-      // Nominatim failed — fall back to raw coordinates
-      userLocation = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
-    }
-    txt.textContent = userLocation;
-    txt.classList.add('detected');
-    btn.textContent = 'Update';
+      const named = [city, state, country].filter(Boolean).join(', ');
+      if (named) resolved = named;
+    } catch { /* keep coordinates */ }
+    userLocation = resolved;
+    input.value = resolved;
+    input.style.borderColor = '#22c55e';
+    btn.textContent = 'Detect';
     btn.disabled = false;
-  }, (err) => {
-    const messages = {
-      1: 'Location access denied — please allow in browser settings',
-      2: 'Location unavailable — check your device settings',
-      3: 'Location timed out — please try again',
-    };
-    txt.textContent = messages[err.code] || 'Could not get location';
+  }, () => {
+    input.placeholder = 'Could not auto-detect — type your city here';
     btn.textContent = 'Retry';
     btn.disabled = false;
   }, { timeout: 10000, maximumAge: 60000 });
