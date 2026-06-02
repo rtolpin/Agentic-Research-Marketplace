@@ -9,6 +9,7 @@ export interface ServiceInfo {
   name: string;
   priceUsd: number;
   source: 'discovered' | 'default';
+  category?: string;
 }
 
 export interface Finding {

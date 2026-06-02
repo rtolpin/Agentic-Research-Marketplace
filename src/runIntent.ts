@@ -58,6 +58,7 @@ export async function runIntent(
       role: task.role,
       service: service.name,
       serviceSource: service.source,
+      serviceCategory: service.category ?? 'general',
     });
 
     const result = await runWorker(task, service, perWorkerBudget, i);
