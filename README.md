@@ -36,46 +36,65 @@ These questions are designed to showcase multi-agent decomposition — each spaw
 ## How It Works
 
 1. **Orchestrator** — Claude breaks your question into 3–5 focused research sub-tasks (e.g. Market Size, Regulatory Environment, Competitor Analysis)
-2. **Worker Agents** — each agent runs targeted searches via Tavily (free dev key or paid x402 micropayments)
-3. **Synthesis** — Claude reads all findings and writes a decision-ready analysis with inline citations, headers, and a clear recommendation
+2. **Task-Aware Routing** — each agent's sub-task is categorized (finance, legal, academic, local, general) and routed to the best available API on the x402 Bazaar for that category, falling back to Tavily
+3. **Worker Agents** — each agent runs targeted searches via its assigned service, paying per query with x402 micropayments if enabled
+4. **Synthesis** — Claude reads all findings and writes a decision-ready analysis with inline citations, headers, and a clear recommendation
 
 ```
 User Question
      │
      ▼
-┌─────────────┐     plans tasks      ┌──────────────────┐
-│  Orchestrator│ ──────────────────► │  Research Plan   │
-│  (Claude AI) │                     │  3–5 sub-tasks   │
-└─────────────┘                      └──────────────────┘
-                                              │
-                          ┌───────────────────┼───────────────────┐
-                          ▼                   ▼                   ▼
-                   ┌────────────┐      ┌────────────┐      ┌────────────┐
-                   │  Worker 1  │      │  Worker 2  │      │  Worker N  │
-                   │  Tavily/   │      │  Tavily/   │      │  Tavily/   │
-                   │  x402      │      │  x402      │      │  x402      │
-                   └────────────┘      └────────────┘      └────────────┘
-                          │                   │                   │
-                          └───────────────────┴───────────────────┘
-                                              │
-                                              ▼
-                                   ┌─────────────────────┐
-                                   │  Claude Synthesis   │
-                                   │  AI Analysis +      │
-                                   │  Recommendations    │
-                                   └─────────────────────┘
+┌─────────────┐   plans + categorizes   ┌──────────────────────────────┐
+│ Orchestrator │ ──────────────────────► │  Research Plan               │
+│ (Claude AI)  │                         │  Task 1: finance             │
+└─────────────┘                          │  Task 2: legal               │
+                                         │  Task 3: general             │
+                                         └──────────────────────────────┘
+                                                       │
+                           ┌───────────────────────────┼──────────────────────┐
+                           ▼                           ▼                      ▼
+                  ┌─────────────────┐        ┌──────────────────┐    ┌─────────────────┐
+                  │   Worker 1      │        │    Worker 2       │    │    Worker 3      │
+                  │ category:finance│        │ category: legal   │    │ category:general │
+                  │  → Finance API  │        │  → Legal DB       │    │  → Tavily        │
+                  │  (x402 payment) │        │  (x402 payment)   │    │  (x402/free)     │
+                  └─────────────────┘        └──────────────────┘    └─────────────────┘
+                           │                           │                      │
+                           └───────────────────────────┴──────────────────────┘
+                                                       │
+                                                       ▼
+                                          ┌─────────────────────┐
+                                          │   Claude Synthesis  │
+                                          │   AI Analysis +     │
+                                          │   Recommendations   │
+                                          └─────────────────────┘
 ```
+
+### Task-Aware Service Routing
+
+Each agent's sub-task is automatically categorized and routed to the most relevant service on the x402 Bazaar:
+
+| Category | Triggered by keywords | Bazaar searches for |
+|---|---|---|
+| `finance` | stock, invest, earnings, valuation, market cap… | Financial data & market APIs |
+| `legal` | regulation, compliance, import, law, permit… | Legal & regulatory databases |
+| `academic` | research, study, clinical trial, paper… | Academic & scientific APIs |
+| `local` | near me, store, restaurant, buy, where to… | Local directory & places APIs |
+| `general` | *(everything else)* | Falls straight to Tavily |
+
+If the Bazaar returns no specialist for a category, the agent falls back to its sub-question as a general Bazaar query, then to Tavily. The category is shown as a badge on each worker card in the UI.
 
 ---
 
 ## Features
 
 - **Multi-agent planning** — Claude decomposes complex questions into parallel research threads
+- **Task-aware routing** — agents are categorized (finance, legal, academic, local) and routed to the best specialist API on the x402 Bazaar
 - **AI synthesis** — structured analysis with headers, bullet points, and inline citations
 - **x402 micropayments** — optionally pay for search results on-chain via Coinbase's x402 protocol
 - **CDP wallet** — server-managed EVM wallet on Base mainnet handles payments automatically
-- **Service discovery** — optionally discover research services via x402 Bazaar (with Tavily fallback)
-- **Spend controls** — configurable per-session spend cap (default $1.00 USDC)
+- **Location awareness** — detects user location and injects it into queries for locally relevant results
+- **Spend controls** — configurable per-session spend cap with real-time cost breakdown (search + Claude API)
 - **Real-time streaming** — live progress via Server-Sent Events as agents work
 
 ---
@@ -182,7 +201,7 @@ src/
 ├── orchestrator.ts  # Claude planning + synthesis prompts
 ├── worker.ts        # Individual research agent execution
 ├── payment.ts       # CDP wallet + x402 paid fetch
-├── discovery.ts     # x402 Bazaar service discovery
+├── discovery.ts     # x402 Bazaar service discovery with task-aware routing
 ├── ledger.ts        # In-memory spend tracking
 ├── types.ts         # Shared TypeScript interfaces
 └── scripts/
