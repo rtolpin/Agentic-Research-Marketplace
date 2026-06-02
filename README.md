@@ -14,6 +14,25 @@ Ask a question like *"Should I expand my coffee business into Japan?"* and a tea
 
 ---
 
+## Example Queries
+
+These questions are designed to showcase multi-agent decomposition — each spawns 3–5 specialized research agents working in parallel:
+
+| Query | Agents spawned |
+|---|---|
+| *Should I expand my coffee business into Japan?* | Market size · Competitor landscape · Regulatory/import rules · Consumer preferences · Entry costs |
+| *Is it a good time to invest in electric vehicle stocks?* | EV market trends · Key players & financials · Government policy · Supply chain risks · Analyst outlook |
+| *Should I leave my corporate job to start a fintech startup?* | Fintech funding climate · Regulatory barriers · Competitor landscape · Founder success rates · Personal runway |
+| *AWS, GCP, or Azure for an early-stage AI startup?* | Pricing comparison · AI/ML tooling · Startup credits · Migration complexity · Support quality |
+| *Where can I buy my father a nice suit and tie in New York City?* | Top menswear stores · Price ranges · Tailoring options · Neighbourhood guide *(location-aware)* |
+| *Is it better to buy or rent in Miami right now?* | Housing market data · Price-to-rent ratios · Mortgage outlook · Neighbourhood trends · Tax implications |
+| *Should I build my app's backend in Go or Rust?* | Performance benchmarks · Talent pool · Ecosystem & libraries · Learning curve · Industry adoption |
+| *What are the key risks of launching a food delivery startup in Chicago?* | Market saturation · Unit economics · Labour/regulatory laws · Incumbent moats · Consumer demand |
+
+> **Tip:** Click **Detect my location** before searching for local queries (shopping, restaurants, real estate) to get geographically relevant results.
+
+---
+
 ## How It Works
 
 1. **Orchestrator** — Claude breaks your question into 3–5 focused research sub-tasks (e.g. Market Size, Regulatory Environment, Competitor Analysis)
@@ -132,14 +151,25 @@ Open [http://localhost:3000](http://localhost:3000)
 |---|---|---|
 | `USE_X402` | `false` | `true` = pay for searches with USDC on-chain; `false` = use free Tavily key |
 | `USE_DISCOVERY` | `false` | `true` = discover services via x402 Bazaar; `false` = always use Tavily |
-| `MAX_AGENTS` | `5` | Max concurrent research agents (1–5) |
-| `MAX_SPEND_USDC` | `1.00` | Per-session spend cap in USDC |
+| `MAX_AGENTS` | `5` | Max research agents per query (1–5) |
+| `MAX_QUERIES_PER_WORKER` | `2` | Max searches per agent (1–5) |
+| `MAX_SPEND_USDC` | `1.00` | Per-session USDC spend cap |
 | `NETWORK` | `base-mainnet` | Chain for x402 payments |
 | `PORT` | `3000` | HTTP server port |
 
+### Marketplace Modes
+
+| Mode | Config | How it works |
+|---|---|---|
+| **Dev** | `USE_X402=false` | Free Tavily dev key — no wallet needed |
+| **Paid** | `USE_X402=true` | Pays Tavily ~$0.01/search via x402 micropayment on Base |
+| **Full Marketplace** | `USE_X402=true` + `USE_DISCOVERY=true` | Each agent queries the x402 Bazaar to find the cheapest available API for its sub-task, paying autonomously. Falls back to Tavily if nothing is found. |
+
+In **Full Marketplace** mode, agents can discover and pay *different specialized services* per sub-task — a finance API for market data, a legal database for regulations, an academic API for research papers — each paid peer-to-peer with no accounts or subscriptions. This is the core vision of the agentic payments marketplace.
+
 ### Enabling x402 Payments
 
-Set `USE_X402=true` in `.env` and fund your CDP wallet with USDC on Base mainnet. The app will display your wallet address in the status bar — send a small amount of USDC there before running paid queries. The spend cap prevents runaway costs.
+Set `USE_X402=true` and fund your CDP wallet with USDC on Base mainnet. The wallet address is shown in the status bar — send a small amount of USDC before running paid queries. The spend cap prevents runaway costs.
 
 ---
 
