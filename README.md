@@ -35,39 +35,67 @@ These questions are designed to showcase multi-agent decomposition — each spaw
 
 ## How It Works
 
-1. **Orchestrator** — Claude breaks your question into 3–5 focused research sub-tasks (e.g. Market Size, Regulatory Environment, Competitor Analysis)
-2. **Task-Aware Routing** — each agent's sub-task is categorized (finance, legal, academic, local, general) and routed to the best available API on the x402 Bazaar for that category, falling back to Tavily
-3. **Worker Agents** — each agent runs targeted searches via its assigned service, paying per query with x402 micropayments if enabled
-4. **Synthesis** — Claude reads all findings and writes a decision-ready analysis with inline citations, headers, and a clear recommendation
+1. **Orchestrator** — Claude breaks your question into 3–5 focused sub-tasks and injects your location if provided
+2. **Task-Aware Routing** — each sub-task is classified into one of 12 categories (finance, legal, news, ecommerce, real estate, weather, travel, jobs, social, academic, local, general) and matched to the best specialist API from 125+ services on the x402 Bazaar
+3. **Worker Agents** — each agent queries its assigned service and pays autonomously via x402 micropayments (~$0.01 USDC on Base) or uses the free Tavily dev key
+4. **Synthesis** — Claude reads all findings and writes a structured analysis with inline citations and a clear recommendation
 
 ```
-User Question
-     │
-     ▼
-┌─────────────┐   plans + categorizes   ┌──────────────────────────────┐
-│ Orchestrator │ ──────────────────────► │  Research Plan               │
-│ (Claude AI)  │                         │  Task 1: finance             │
-└─────────────┘                          │  Task 2: legal               │
-                                         │  Task 3: general             │
-                                         └──────────────────────────────┘
-                                                       │
-                           ┌───────────────────────────┼──────────────────────┐
-                           ▼                           ▼                      ▼
-                  ┌─────────────────┐        ┌──────────────────┐    ┌─────────────────┐
-                  │   Worker 1      │        │    Worker 2       │    │    Worker 3      │
-                  │ category:finance│        │ category: legal   │    │ category:general │
-                  │  → Finance API  │        │  → Legal DB       │    │  → Tavily        │
-                  │  (x402 payment) │        │  (x402 payment)   │    │  (x402/free)     │
-                  └─────────────────┘        └──────────────────┘    └─────────────────┘
-                           │                           │                      │
-                           └───────────────────────────┴──────────────────────┘
-                                                       │
-                                                       ▼
-                                          ┌─────────────────────┐
-                                          │   Claude Synthesis  │
-                                          │   AI Analysis +     │
-                                          │   Recommendations   │
-                                          └─────────────────────┘
+ User Question + 📍 Location (optional)
+          │
+          ▼
+ ┌─────────────────────┐
+ │   Claude AI         │  plans 3–5 focused sub-tasks
+ │   Orchestrator      │  injects location into queries
+ └─────────────────────┘
+          │
+          ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  Research Plan                                                  │
+ │  Task 1: "EV market size"     → category: finance               │
+ │  Task 2: "Import regulations" → category: legal                 │
+ │  Task 3: "Consumer trends"    → category: news                  │
+ │  Task 4: "Local competitors"  → category: local                 │
+ └─────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  x402 Bazaar Discovery  (125+ registered services)              │
+ │                                                                 │
+ │  finance  ──► Real-time stock quotes / OHLCV / market data      │
+ │  legal    ──► Regulatory monitoring / SEC EDGAR filings         │
+ │  news     ──► News search / sentiment / AI article summaries    │
+ │  local    ──► Google Maps places / nearby search / geocoding    │
+ │  ecommerce──► Amazon product search / BSR rankings              │
+ │  real_estate► Zillow listings / investment analysis             │
+ │  weather  ──► Current conditions / 5-day forecasts              │
+ │  travel   ──► Google Flights / FlightAware / destinations       │
+ │  jobs     ──► LinkedIn/Indeed scraper / salary data             │
+ │  social   ──► Social sentiment / engagement metrics             │
+ │  academic ──► Academic papers / 240M+ publications              │
+ │  general  ──► Tavily web search (fallback)                      │
+ └─────────────────────────────────────────────────────────────────┘
+          │  each agent pays its service autonomously via x402
+          │  (~$0.01 USDC/query on Base mainnet, or free dev key)
+          ▼
+ ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+ │ Worker 1 │  │ Worker 2 │  │ Worker 3 │  │ Worker N │
+ │ finance  │  │  legal   │  │  news    │  │  local   │
+ │ API call │  │ DB query │  │ search   │  │ maps API │
+ └──────────┘  └──────────┘  └──────────┘  └──────────┘
+       │             │             │              │
+       └─────────────┴─────────────┴──────────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │   Claude AI         │  reads all findings
+                │   Synthesis         │  cites sources inline
+                │                     │  writes recommendation
+                └─────────────────────┘
+                           │
+                           ▼
+              AI Analysis & Recommendations
+              (headers · bullet points · citations)
 ```
 
 ### Task-Aware Service Routing
