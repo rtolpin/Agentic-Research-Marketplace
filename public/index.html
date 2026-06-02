@@ -525,7 +525,6 @@ function startRun() {
       es.close();
       running = false;
       document.getElementById('runBtn').disabled = false;
-      document.getElementById('newSearchBtn').style.display = 'block';
       loadStatus();
     }
   };
@@ -546,7 +545,6 @@ function handleUpdate(data) {
 
     case 'plan_ready': {
       document.getElementById('launchCard').style.display = 'none';
-      document.getElementById('newSearchBtn').style.display = 'block';
       const grid = document.getElementById('planGrid');
       grid.innerHTML = '';
       data.tasks.forEach((t, i) => {
@@ -636,6 +634,7 @@ function handleUpdate(data) {
       const answerEl = document.getElementById('answerText');
       answerEl.innerHTML = renderMarkdown(res.answer);
       document.getElementById('answerCard').style.display = 'block';
+      document.getElementById('newSearchBtn').style.display = 'block';
       updateSpend(res.claudeCostUsd ?? null);
       log('Analysis complete — see your results above', 'success');
       break;
