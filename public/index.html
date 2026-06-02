@@ -352,7 +352,8 @@
       <button class="location-btn" onclick="detectLocation()">Detect my location</button>
     </div>
     <div class="input-row">
-      <input id="intent" type="text" placeholder="Ask a complex research question…" />
+      <input id="intent" type="text" placeholder="Ask a complex research question…"
+             onkeydown="if(event.key==='Enter')startRun()" />
       <button id="runBtn" onclick="startRun()">Research</button>
     </div>
   </div>
