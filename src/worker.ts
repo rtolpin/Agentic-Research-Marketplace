@@ -2,7 +2,7 @@ import { paidCall } from './payment.js';
 import * as ledger from './ledger.js';
 import type { ResearchTask, WorkerResult, Finding, ServiceInfo, TavilyResponse } from './types.js';
 
-const MAX_QUERIES_PER_WORKER = 2;
+const MAX_QUERIES_PER_WORKER = Math.min(parseInt(process.env.MAX_QUERIES_PER_WORKER ?? '2', 10), 5);
 
 function parseTavilyResults(data: unknown): Finding[] {
   const d = data as Partial<TavilyResponse>;

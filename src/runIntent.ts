@@ -24,6 +24,9 @@ export async function runIntent(
 ): Promise<IntentResult> {
   const emit = (u: ProgressUpdate) => onUpdate?.(u);
 
+  // Reset ledger so each request gets its own fresh budget
+  ledger.reset();
+
   // Distribute global budget evenly across workers (pessimistic: assume MAX_AGENTS)
   const maxAgents = parseInt(process.env.MAX_AGENTS ?? '5', 10);
   const perWorkerBudget = ledger.getMaxSpend() / maxAgents;
