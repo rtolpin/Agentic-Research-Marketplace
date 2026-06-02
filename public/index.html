@@ -420,44 +420,80 @@ function setManualLocation(val) {
   userLocation = val.trim();
 }
 
+function applyLocation(city) {
+  const input = document.getElementById('locationInput');
+  const btn = document.querySelector('.location-btn');
+  userLocation = city;
+  input.value = city;
+  input.style.borderColor = '#22c55e';
+  btn.textContent = 'Detect';
+  btn.disabled = false;
+}
+
+async function ipFallback() {
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    const d = await res.json();
+    const city = [d.city, d.region, d.country_code].filter(Boolean).join(', ');
+    if (city) { applyLocation(city); return; }
+  } catch {}
+  // Last resort — leave input editable with helpful placeholder
+  const input = document.getElementById('locationInput');
+  const btn = document.querySelector('.location-btn');
+  input.placeholder = 'Type your city (e.g. New York, NY)';
+  btn.textContent = 'Detect';
+  btn.disabled = false;
+}
+
+async function reverseGeocode(lat, lon) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+    { headers: { 'Accept-Language': 'en', 'User-Agent': 'AgenticResearchMarketplace/1.0' } }
+  );
+  const d = await res.json();
+  const city = d.address?.city || d.address?.town || d.address?.village || d.address?.county || '';
+  const state = d.address?.state || '';
+  const country = d.address?.country_code?.toUpperCase() || '';
+  return [city, state, country].filter(Boolean).join(', ');
+}
+
 async function detectLocation() {
   const btn = document.querySelector('.location-btn');
   const input = document.getElementById('locationInput');
   btn.textContent = 'Detecting…';
   btn.disabled = true;
+  input.style.borderColor = '#334155';
 
   if (!navigator.geolocation) {
-    input.placeholder = 'Geolocation not supported — type your city above';
-    btn.textContent = 'Detect';
-    btn.disabled = false;
+    await ipFallback();
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const { latitude, longitude } = pos.coords;
-    let resolved = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-        { headers: { 'Accept-Language': 'en', 'User-Agent': 'AgenticResearchMarketplace/1.0' } }
-      );
-      const data = await res.json();
-      const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
-      const state = data.address?.state || '';
-      const country = data.address?.country_code?.toUpperCase() || '';
-      const named = [city, state, country].filter(Boolean).join(', ');
-      if (named) resolved = named;
-    } catch { /* keep coordinates */ }
-    userLocation = resolved;
-    input.value = resolved;
-    input.style.borderColor = '#22c55e';
-    btn.textContent = 'Detect';
-    btn.disabled = false;
-  }, () => {
-    input.placeholder = 'Could not auto-detect — type your city here';
-    btn.textContent = 'Retry';
-    btn.disabled = false;
-  }, { timeout: 10000, maximumAge: 60000 });
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        const named = await reverseGeocode(latitude, longitude);
+        applyLocation(named || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
+      } catch {
+        applyLocation(`${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
+      }
+    },
+    async (err) => {
+      if (err.code === 1) {
+        // User denied — don't fall back silently, tell them
+        const input = document.getElementById('locationInput');
+        const btn = document.querySelector('.location-btn');
+        input.placeholder = 'Permission denied — type your city manually';
+        btn.textContent = 'Detect';
+        btn.disabled = false;
+      } else {
+        // Unavailable or timeout — try IP geolocation silently
+        await ipFallback();
+      }
+    },
+    { timeout: 8000, maximumAge: 300000, enableHighAccuracy: false }
+  );
 }
 
 async function loadStatus() {
@@ -744,6 +780,7 @@ const EXAMPLE_QUERIES = [
 
 
 loadStatus();
+detectLocation();
 </script>
 </body>
 </html>
