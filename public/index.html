@@ -466,7 +466,7 @@ async function loadStatus() {
     const budgetColor = remainingPct > 50 ? '#4ade80' : remainingPct > 20 ? '#fbbf24' : '#f87171';
     bar.innerHTML = `
       <span>Wallet: <code style="color:#a78bfa">${s.walletAddress.slice(0,8)}…${s.walletAddress.slice(-4)}</code></span>
-      <span>Budget: <b style="color:${budgetColor}">$${s.remainingBudget.toFixed(4)}</b> remaining / $${s.maxSpend.toFixed(2)}</span>
+      <span>Budget: <b style="color:${budgetColor}">$${s.remainingBudget.toFixed(2)}</b> remaining / $${s.maxSpend.toFixed(2)}</span>
       <span>Network: <code style="color:#94a3b8">${s.flags.NETWORK || 'base-mainnet'}</code></span>
       <span>x402 <span class="badge ${s.flags.USE_X402 ? 'badge-on' : 'badge-off'}">${s.flags.USE_X402 ? 'ON' : 'OFF'}</span></span>
       <span>Discovery <span class="badge ${s.flags.USE_DISCOVERY ? 'badge-on' : 'badge-off'}">${s.flags.USE_DISCOVERY ? 'ON' : 'OFF'}</span></span>
