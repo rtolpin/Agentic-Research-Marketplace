@@ -4,6 +4,8 @@ An AI-powered research platform where autonomous agents collaborate to answer co
 
 Ask a question like *"Should I expand my coffee business into Japan?"* and a team of specialized AI agents will plan, search, and synthesize a structured analysis with citations and actionable recommendations.
 
+> The app is built on Coinbase's CDP infrastructure. It creates a server-managed EVM wallet on Base mainnet that agents can use to autonomously pay for API services via x402 micropayments — without needing accounts or subscriptions. In demo mode, searches use a free Tavily key. With `USE_X402=true` and a funded wallet, agents pay ~$0.01 USDC per search directly on-chain.
+
 ![Research Marketplace](https://img.shields.io/badge/Base-Mainnet-blue) ![Claude](https://img.shields.io/badge/Claude-Sonnet-purple) ![x402](https://img.shields.io/badge/x402-micropayments-green)
 
 ---
