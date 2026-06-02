@@ -18,6 +18,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Streaming run endpoint using Server-Sent Events
 app.get('/api/run', async (req, res) => {
   const intent = (req.query.intent as string | undefined)?.trim();
+  const location = (req.query.location as string | undefined)?.trim() || undefined;
   if (!intent) {
     res.status(400).json({ error: 'intent query param required' });
     return;
@@ -35,7 +36,7 @@ app.get('/api/run', async (req, res) => {
   try {
     await runIntent(intent, (update: ProgressUpdate) => {
       send(update);
-    });
+    }, location);
   } catch (err) {
     send({ type: 'error', message: (err as Error).message });
   } finally {

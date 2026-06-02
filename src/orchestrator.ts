@@ -16,6 +16,7 @@ Rules:
 - Tasks must be non-overlapping and together cover the intent fully
 - Maximum ${MAX_AGENTS} tasks
 - Prefer 3-4 focused tasks over 5 broad ones
+- If a user location is provided and the query is local in nature (shopping, restaurants, services, events, places), include the location in search queries
 - Return ONLY the JSON array, nothing else`;
 
 const SYNTHESIS_PROMPT = `You are a senior research analyst. Given a user intent and research findings from multiple agents, write a decision-useful answer.
@@ -25,6 +26,7 @@ Rules:
 - Note disagreements or contradictions between sources
 - Structure the answer clearly (use headers if the answer is long)
 - End with a concise recommendation or conclusion
+- If a user location was provided, prioritize locally relevant results and call them out explicitly
 - Be direct — this is for decision-making, not academic writing`;
 
 export interface WorkerFinding {
@@ -37,13 +39,14 @@ export interface WorkerFinding {
   txHashes: string[];
 }
 
-export async function plan(intent: string): Promise<ResearchTask[]> {
+export async function plan(intent: string, location?: string): Promise<ResearchTask[]> {
   let tasks: ResearchTask[] = [];
+  const locationLine = location ? `User location: ${location}\n` : '';
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const prompt = attempt === 0
-      ? `User intent: "${intent}"\n\nOutput the JSON array of research tasks.`
-      : `User intent: "${intent}"\n\nOutput ONLY a valid JSON array. No explanation, no markdown, no code fences. Start with [ and end with ].`;
+      ? `${locationLine}User intent: "${intent}"\n\nOutput the JSON array of research tasks.`
+      : `${locationLine}User intent: "${intent}"\n\nOutput ONLY a valid JSON array. No explanation, no markdown, no code fences. Start with [ and end with ].`;
 
     const msg = await client.messages.create({
       model: MODEL,
@@ -83,6 +86,7 @@ export async function plan(intent: string): Promise<ResearchTask[]> {
 export async function synthesize(
   intent: string,
   workerFindings: WorkerFinding[],
+  location?: string,
 ): Promise<string> {
   const findingsText = workerFindings
     .map((wf) => {
@@ -93,13 +97,15 @@ export async function synthesize(
     })
     .join('\n\n');
 
+  const locationLine = location ? `User location: ${location}\n` : '';
+
   const msg = await client.messages.create({
     model: MODEL,
     max_tokens: 2048,
     messages: [
       {
         role: 'user',
-        content: `${SYNTHESIS_PROMPT}\n\nUser intent: "${intent}"\n\n## Research Findings\n\n${findingsText}\n\nWrite the answer now.`,
+        content: `${SYNTHESIS_PROMPT}\n\n${locationLine}User intent: "${intent}"\n\n## Research Findings\n\n${findingsText}\n\nWrite the answer now.`,
       },
     ],
   });

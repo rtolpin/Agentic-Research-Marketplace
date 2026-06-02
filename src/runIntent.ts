@@ -20,6 +20,7 @@ export type ProgressUpdate =
 export async function runIntent(
   intent: string,
   onUpdate?: (update: ProgressUpdate) => void,
+  location?: string,
 ): Promise<IntentResult> {
   const emit = (u: ProgressUpdate) => onUpdate?.(u);
 
@@ -29,8 +30,8 @@ export async function runIntent(
 
   // 1. Plan
   emit({ type: 'planning' });
-  console.log(`\n[runIntent] Planning for: "${intent}"`);
-  const tasks = await plan(intent);
+  console.log(`\n[runIntent] Planning for: "${intent}"${location ? ` (location: ${location})` : ''}`);
+  const tasks = await plan(intent, location);
   console.log(`[runIntent] Plan: ${tasks.length} tasks`);
   tasks.forEach((t, i) => console.log(`  [${i}] ${t.role}: ${t.subQuestion}`));
   emit({ type: 'plan_ready', tasks });
@@ -74,7 +75,7 @@ export async function runIntent(
     txHashes: wr.txHashes,
   }));
 
-  const answer = await synthesize(intent, workerFindings);
+  const answer = await synthesize(intent, workerFindings, location);
 
   const totalSpend = ledger.getTotalSpend();
   console.log(`[runIntent] Done. Total spend: $${totalSpend.toFixed(4)}`);
