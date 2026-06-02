@@ -431,16 +431,26 @@ function applyLocation(city) {
 }
 
 async function ipFallback() {
+  const input = document.getElementById('locationInput');
+  const btn = document.querySelector('.location-btn');
   try {
     const res = await fetch('https://ipapi.co/json/');
     const d = await res.json();
     const city = [d.city, d.region, d.country_code].filter(Boolean).join(', ');
-    if (city) { applyLocation(city); return; }
+    if (city) {
+      // IP geolocation is approximate — pre-fill but highlight for correction
+      userLocation = city;
+      input.value = city;
+      input.style.borderColor = '#f59e0b';
+      input.title = 'Approximate — based on your IP address. Edit if incorrect.';
+      input.select();
+      btn.textContent = 'Detect';
+      btn.disabled = false;
+      return;
+    }
   } catch {}
-  // Last resort — leave input editable with helpful placeholder
-  const input = document.getElementById('locationInput');
-  const btn = document.querySelector('.location-btn');
   input.placeholder = 'Type your city (e.g. New York, NY)';
+  input.focus();
   btn.textContent = 'Detect';
   btn.disabled = false;
 }
