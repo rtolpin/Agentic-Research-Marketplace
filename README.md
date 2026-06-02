@@ -72,24 +72,31 @@ User Question
 
 ### Task-Aware Service Routing
 
-Each agent's sub-task is automatically categorized and routed to the most relevant service on the x402 Bazaar:
+Each agent's sub-task is automatically categorized across 12 domains and routed to the best matching specialist on the x402 Bazaar (125+ registered services):
 
-| Category | Triggered by keywords | Bazaar searches for |
+| Category | Triggered by keywords | Example Bazaar services found |
 |---|---|---|
-| `finance` | stock, invest, earnings, valuation, market cap… | Financial data & market APIs |
-| `legal` | regulation, compliance, import, law, permit… | Legal & regulatory databases |
-| `academic` | research, study, clinical trial, paper… | Academic & scientific APIs |
-| `local` | near me, store, restaurant, buy, where to… | Local directory & places APIs |
-| `general` | *(everything else)* | Falls straight to Tavily |
+| `finance` | stock, invest, earnings, market cap, ticker… | Real-time stock quotes, OHLCV data, financial news sentiment |
+| `legal` | regulation, compliance, law, permit, SEC filing… | Regulatory monitoring, SEC EDGAR filings, compliance databases |
+| `academic` | research, study, paper, citation, clinical… | Academic paper search, 240M+ publications via OpenAlex |
+| `local` | near me, store, restaurant, places, maps… | Google Maps places, nearby search, geocoding |
+| `news` | headline, breaking, latest, trending, sentiment… | News search, sentiment scoring, AI article summaries |
+| `ecommerce` | product, amazon, price comparison, reviews… | Amazon product search, BSR rankings, price history |
+| `real_estate` | property, zillow, rent, housing market… | Zillow listings, investment analysis, real estate law |
+| `weather` | forecast, temperature, climate, storm… | Current conditions, 5-day forecasts, historical weather |
+| `travel` | flight, hotel, destination, airline, booking… | Google Flights search, FlightAware, travel destinations |
+| `jobs` | hiring, salary, career, glassdoor, remote… | LinkedIn/Indeed scraper, salary data, Web3 job market |
+| `social` | social media, sentiment, viral, engagement… | Social post analysis, brand sentiment, engagement metrics |
+| `general` | *(everything else)* | Raw sub-question query, then Tavily fallback |
 
-If the Bazaar returns no specialist for a category, the agent falls back to its sub-question as a general Bazaar query, then to Tavily. The category is shown as a badge on each worker card in the UI.
+If the Bazaar returns no specialist for a category, the agent tries its sub-question as a general Bazaar query, then falls back to Tavily. Each worker card displays a category badge so you can see exactly which routing path was taken.
 
 ---
 
 ## Features
 
 - **Multi-agent planning** — Claude decomposes complex questions into parallel research threads
-- **Task-aware routing** — agents are categorized (finance, legal, academic, local) and routed to the best specialist API on the x402 Bazaar
+- **Task-aware routing** — agents are categorized across 12 domains (finance, legal, academic, news, ecommerce, real estate, weather, travel, jobs, social, local, general) and routed to the best specialist API from 125+ services on the x402 Bazaar
 - **AI synthesis** — structured analysis with headers, bullet points, and inline citations
 - **x402 micropayments** — optionally pay for search results on-chain via Coinbase's x402 protocol
 - **CDP wallet** — server-managed EVM wallet on Base mainnet handles payments automatically
