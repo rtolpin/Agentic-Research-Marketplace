@@ -3,11 +3,13 @@ import { CdpClient } from '@coinbase/cdp-sdk';
 import { wrapFetchWithPayment, x402Client, decodePaymentResponseHeader } from '@x402/fetch';
 import { registerExactEvmScheme } from '@x402/evm/exact/client';
 import { toClientEvmSigner } from '@x402/evm';
-import * as ledger from './ledger.js';
+import { RunLedger } from './ledger.js';
+import { authorizePayment, paymentScope, type RequirementsLike } from './guardrails/spend.js';
 import type { PaidCallResult } from './types.js';
 
 export const TAVILY_X402_URL = 'https://x402.tavily.com/search';
 const TAVILY_FREE_URL = 'https://api.tavily.com/search';
+const REQUEST_TIMEOUT_MS = parseInt(process.env.SERVICE_TIMEOUT_MS ?? '20000', 10);
 
 let paidFetch: ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) | null = null;
 let _walletAddress = '';
@@ -56,6 +58,16 @@ async function _initPaymentClient(): Promise<typeof fetch> {
   const client = new x402Client();
   registerExactEvmScheme(client, { signer });
 
+  // Spend guardrail: check the price the service actually asks for and reserve it
+  // against the current run's ledger before anything is signed.
+  client.onBeforePaymentCreation(async ({ selectedRequirements }) => {
+    const decision = authorizePayment(selectedRequirements as unknown as RequirementsLike);
+    if (!decision.ok) {
+      console.warn(`[payment] Blocked: ${decision.reason}`);
+      return { abort: true, reason: decision.reason };
+    }
+  });
+
   paidFetch = wrapFetchWithPayment(fetch, client);
   cachedPriceUsd = await _fetchTavilyPricing();
   return paidFetch as typeof fetch;
@@ -63,12 +75,14 @@ async function _initPaymentClient(): Promise<typeof fetch> {
 
 /**
  * Generic paid call — pays any x402 service URL (or free Tavily when USE_X402=false).
- * Checks the spend cap, pays, decodes the receipt, records spend.
+ * Checks the spend cap, pays (the payment hook enforces policy and reserves the
+ * real price), decodes the receipt, records spend.
  */
 export async function paidCall(
   serviceUrl: string,
   body: Record<string, unknown>,
-  workerId = 'unknown',
+  workerId: string,
+  ledger: RunLedger,
 ): Promise<PaidCallResult> {
   const useX402 = process.env.USE_X402 === 'true';
 
@@ -81,6 +95,7 @@ export async function paidCall(
         Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) {
       const txt = await res.text();
@@ -91,31 +106,36 @@ export async function paidCall(
   }
 
   // Paid x402 path
-  const costUsd = cachedPriceUsd;
-  if (!ledger.canSpend(costUsd)) {
+  if (!ledger.canSpend(cachedPriceUsd)) {
     throw new Error(
-      `Spend cap reached: $${ledger.getTotalSpend().toFixed(4)} of $${ledger.getMaxSpend()} used`,
+      `Spend cap reached: $${ledger.getTotalSpend().toFixed(4)} of $${ledger.maxSpend} used`,
     );
   }
 
   const fetchFn = await _initPaymentClient();
 
-  const res = await fetchFn(serviceUrl, {
+  // A thrown error after a payment was signed keeps its reservation: we can't
+  // tell whether it settled, so the caps stay conservative.
+  const scope = { ledger, reservedUsd: 0 };
+  const res = await paymentScope.run(scope, () => fetchFn(serviceUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }));
+  const header = res.headers.get('payment-response') ?? res.headers.get('PAYMENT-RESPONSE');
 
   if (!res.ok) {
+    // No receipt means the service did not settle; give the reservation back.
+    if (!header && scope.reservedUsd > 0) ledger.release(scope.reservedUsd);
     const txt = await res.text().catch(() => '');
-    throw new Error(`x402 service error ${res.status}: ${txt}`);
+    throw new Error(`x402 service error ${res.status}: ${txt.slice(0, 300)}`);
   }
 
   const data = await res.json();
 
   // Decode the PAYMENT-RESPONSE receipt for the on-chain tx hash
   let txHash = '';
-  const header = res.headers.get('payment-response') ?? res.headers.get('PAYMENT-RESPONSE');
   if (header) {
     try {
       const receipt = decodePaymentResponseHeader(header);
@@ -128,7 +148,8 @@ export async function paidCall(
     }
   }
 
-  ledger.recordSpend({ workerId, service: serviceUrl, costUsd, txHash, timestamp: Date.now() });
+  const costUsd = scope.reservedUsd;
+  ledger.commit({ workerId, service: serviceUrl, costUsd, txHash, timestamp: Date.now() });
 
   return { data, costUsd, txHash };
 }
@@ -140,8 +161,9 @@ export async function paidSearch(
   query: string,
   params: Record<string, unknown> = {},
   workerId = 'unknown',
+  ledger: RunLedger = new RunLedger(),
 ): Promise<PaidCallResult> {
   const useX402 = process.env.USE_X402 === 'true';
   const serviceUrl = useX402 ? TAVILY_X402_URL : TAVILY_FREE_URL;
-  return paidCall(serviceUrl, { query, max_results: 5, include_answer: true, ...params }, workerId);
+  return paidCall(serviceUrl, { query, max_results: 5, include_answer: true, ...params }, workerId, ledger);
 }
