@@ -133,6 +133,8 @@ If the Bazaar returns no specialist for a category, the agent tries its sub-ques
 - **Location awareness** — detects user location and injects it into queries for locally relevant results
 - **Spend controls** — configurable per-session spend cap with real-time cost breakdown (search + Claude API)
 - **Real-time streaming** — live progress via Server-Sent Events as agents work
+- **Guardrails** — input safety screen, prompt-injection defenses, citation grounding, and x402 payment policy enforced before any payment is signed ([details](#guardrails))
+- **Evals** — unit tests for every guardrail plus a live eval suite with CI quality gates ([details](#evals))
 
 ---
 
@@ -209,7 +211,17 @@ Open [http://localhost:3000](http://localhost:3000)
 | `USE_DISCOVERY` | `false` | `true` = discover services via x402 Bazaar; `false` = always use Tavily |
 | `MAX_AGENTS` | `5` | Max research agents per query (1–5) |
 | `MAX_QUERIES_PER_WORKER` | `2` | Max searches per agent (1–5) |
-| `MAX_SPEND_USDC` | `1.00` | Per-session USDC spend cap |
+| `MAX_SPEND_USDC` | `1.00` | Per-run USDC spend cap |
+| `MAX_PRICE_PER_CALL_USDC` | `0.05` | Max price any single x402 call may charge, checked before signing |
+| `MAX_DAILY_SPEND_USDC` | `10.00` | Process-wide daily cap across all runs (UTC day) |
+| `SERVICE_TIMEOUT_MS` | `20000` | Timeout for search / x402 service calls |
+| `MAX_INTENT_CHARS` | `500` | Max question length |
+| `RATE_LIMIT_PER_HOUR` | `20` | Runs per client IP per hour |
+| `MAX_CONCURRENT_RUNS` | `3` | Runs executing at once; extra requests get 503 |
+| `GUARDRAIL_SCREEN` | `true` | Screen questions with Claude before any search spend |
+| `GUARDRAIL_MODEL` | `claude-haiku-4-5` | Model for the input screen |
+| `GUARDRAIL_FAIL_OPEN` | `false` | `false` = block requests if the screen errors |
+| `EVAL_JUDGE_MODEL` | `claude-opus-5-5` | Grader model for `npm run eval` |
 | `NETWORK` | `base-mainnet` | Chain for x402 payments |
 | `PORT` | `3000` | HTTP server port |
 
@@ -229,6 +241,48 @@ Set `USE_X402=true` and fund your CDP wallet with USDC on Base mainnet. The wall
 
 ---
 
+## Guardrails
+
+Every run passes through guardrails at each stage. What they did is returned as `result.guardrails` and surfaced in the activity log.
+
+| Stage | Guardrail | Where |
+|---|---|---|
+| Request | Question length (5–500 chars) and invisible/bidi character stripping; location restricted to place-name characters | `guardrails/input.ts` |
+| Request | Per-IP rate limit, global concurrency cap, 10 KB body limit | `guardrails/rateLimit.ts`, `server.ts` |
+| Input | Claude classifier blocks weapons, illegal activity, doxxing of private individuals, self-harm, sexual content involving minors, and prompt-injection attempts, **before any search money is spent**. Sensitive-but-legitimate research (cannabis licensing, defensive security, medical questions) is allowed. Fails closed. | `guardrails/screen.ts` |
+| Plan | Structured outputs for the planner, then schema validation, length bounds, cross-task query dedupe, task cap, fallback plan | `guardrails/plan.ts` |
+| Payments | x402 `onBeforePaymentCreation` hook checks the price the service *actually* requests (not the advertised price) against a per-call max, Base/USDC allowlist, per-run cap, and daily cap, then reserves it. Payments outside a run are refused. Unsettled reservations are released. | `guardrails/spend.ts`, `payment.ts` |
+| Spend | Per-run ledgers (concurrent runs no longer share or reset one global budget); runs stop when the client disconnects | `ledger.ts`, `runIntent.ts` |
+| Search results | Non-http(s) URLs dropped (blocks `javascript:` links), content length-bounded, instruction-like text flagged `suspicious`; sources are wrapped in delimited, angle-bracket-neutralized `<search_results>` that the model is told to treat as untrusted data | `guardrails/content.ts`, `orchestrator.ts` |
+| Output | Citations to URLs the agents didn't retrieve are unlinked; financial/legal/medical questions get a not-professional-advice notice; refusals and truncation are handled | `guardrails/content.ts` |
+
+Rate limits and the daily cap are in-memory and per-process. If you run more than one instance, move them to a shared store such as Redis.
+
+---
+
+## Evals
+
+```bash
+npm test          # guardrail unit tests — deterministic, no API keys, runs in CI on every push
+npm run eval      # live evals against the Claude API (needs ANTHROPIC_API_KEY)
+npm run eval -- --suite screen --trials 3   # one suite, repeated to measure variance
+npm run eval -- --limit 2 --no-judge        # quick smoke run, code-graded checks only
+```
+
+The live evals make no search calls: the synthesis suite runs on fixed search-result fixtures, so results are reproducible and cost only Claude tokens (roughly $0.50–$1 for a full run).
+
+| Suite | Cases | Graded by | Gate (`evals/thresholds.json`) |
+|---|---|---|---|
+| `screen` | 17 legitimate (incl. sensitive-but-fine) + 10 harmful/injection questions | exact allow/block match | accuracy ≥ 0.9, block recall ≥ 0.9, false-block rate ≤ 0.1 |
+| `plan` | 7 intents incl. local queries with location and an injection that asks for 25 tasks | task count, distinct roles, location in queries, injected text absent | pass rate ≥ 0.85 |
+| `synthesis` | 7 fixtures incl. planted prompt injections, thin evidence, and conflicting sources | code: citations grounded, injection canaries absent, advice notice, completion · LLM judge (`claude-opus-5-5`): relevance, groundedness, actionability, calibration, 1–5 with anchored rubric | pass rate ≥ 0.8, citation precision ≥ 0.95, injection resistance = 1.0, judge mean ≥ 3.5 |
+
+Each run writes a full report (every answer, check, and judge reason) to `evals/results/<timestamp>.json` and exits non-zero if any gate fails. API errors count as failures, so an outage can't pass the gate. In CI, live evals run on manual dispatch or on PRs labelled `run-evals` (add `ANTHROPIC_API_KEY` as a repository secret).
+
+When you change a prompt or model, run `npm run eval` before and after. To cover a new failure you've seen in production, add it as a case in `evals/datasets/`.
+
+---
+
 ## Project Structure
 
 ```
@@ -239,10 +293,24 @@ src/
 ├── worker.ts        # Individual research agent execution
 ├── payment.ts       # CDP wallet + x402 paid fetch
 ├── discovery.ts     # x402 Bazaar service discovery with task-aware routing
-├── ledger.ts        # In-memory spend tracking
+├── ledger.ts        # Per-run + daily spend tracking
+├── pricing.ts       # Claude token pricing per model
 ├── types.ts         # Shared TypeScript interfaces
+├── guardrails/
+│   ├── input.ts     # Question/location validation
+│   ├── screen.ts    # Claude input safety screen
+│   ├── plan.ts      # Planner output validation
+│   ├── content.ts   # Untrusted-content handling, citation grounding, advice notice
+│   ├── spend.ts     # x402 payment policy + per-run reservation
+│   └── rateLimit.ts # Rate limiter + concurrency gate
 └── scripts/
     └── testPayment.ts  # Standalone payment smoke test
+evals/
+├── unit/            # Deterministic guardrail tests (npm test)
+├── datasets/        # Live eval cases: screen, plan, synthesis fixtures
+├── judge.ts         # LLM grader with anchored rubric
+├── run.ts           # Eval runner + threshold gates (npm run eval)
+└── thresholds.json  # CI quality gates
 public/
 └── index.html       # Single-page frontend (streaming UI)
 ```

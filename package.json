@@ -9,7 +9,10 @@
   "scripts": {
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
-    "test-payment": "tsx src/scripts/testPayment.ts"
+    "test-payment": "tsx src/scripts/testPayment.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test evals/unit/*.test.ts",
+    "eval": "tsx evals/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",

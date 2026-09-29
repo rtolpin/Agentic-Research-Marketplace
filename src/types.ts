@@ -17,6 +17,8 @@ export interface Finding {
   url: string;
   content: string;
   score?: number;
+  /** Set when the text matched a prompt-injection pattern. */
+  suspicious?: boolean;
 }
 
 export interface WorkerResult {
@@ -28,6 +30,8 @@ export interface WorkerResult {
   txHashes: string[];
   serviceUsed: string;
   serviceSource: 'discovered' | 'default';
+  findingsDropped: number;
+  injectionFlags: number;
   error?: string;
 }
 
@@ -53,6 +57,18 @@ export interface IntentResult {
   totalSpend: number;
   claudeCostUsd: number;
   walletAddress: string;
+  guardrails: GuardrailReport;
+}
+
+/** What the guardrails did during a run, for logging, the UI and evals. */
+export interface GuardrailReport {
+  planIssues: string[];
+  findingsDropped: number;
+  injectionFlags: number;
+  citationsKept: number;
+  ungroundedCitations: string[];
+  adviceNoticeAdded: boolean;
+  synthesisStopReason: string | null;
 }
 
 export interface TavilyResult {

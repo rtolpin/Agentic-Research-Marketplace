@@ -581,7 +581,7 @@ function startRun() {
   es.onmessage = (e) => {
     const data = JSON.parse(e.data);
     handleUpdate(data);
-    if (data.type === 'done' || data.type === 'close' || data.type === 'error') {
+    if (data.type === 'done' || data.type === 'close' || data.type === 'error' || data.type === 'blocked') {
       es.close();
       running = false;
       document.getElementById('runBtn').disabled = false;
@@ -599,9 +599,22 @@ function startRun() {
 
 function handleUpdate(data) {
   switch (data.type) {
+    case 'screening':
+      log('Running safety check…');
+      break;
+
     case 'planning':
       log('Claude is planning your research…');
       break;
+
+    case 'blocked': {
+      document.getElementById('launchCard').style.display = 'none';
+      document.getElementById('answerCard').style.display = 'block';
+      document.getElementById('answerText').innerHTML = `<div>${escHtml(data.message)}</div>`;
+      document.getElementById('newSearchBtn').style.display = 'block';
+      log('Request declined by safety check', 'warn');
+      break;
+    }
 
     case 'plan_ready': {
       document.getElementById('launchCard').style.display = 'none';
@@ -657,13 +670,13 @@ function handleUpdate(data) {
       const wf = document.getElementById(`wf-${r.taskIndex}`);
       const topFindings = r.findings.slice(0, 3);
       let html = topFindings.map(f =>
-        `<div class="finding"><a href="${escHtml(f.url)}" target="_blank">${escHtml(f.title)}</a>
+        `<div class="finding"><a href="${escHtml(f.url)}" target="_blank" rel="noopener noreferrer">${escHtml(f.title)}</a>
          <div class="snippet">${escHtml((f.content || '').slice(0, 120))}…</div></div>`
       ).join('');
 
       if (r.txHashes.length) {
         html += `<div style="margin-top:0.5rem">${r.txHashes.map(h =>
-          `<a class="tx-link" href="https://basescan.org/tx/${h}" target="_blank">⛓ ${h.slice(0,10)}…${h.slice(-6)}</a>`
+          `<a class="tx-link" href="https://basescan.org/tx/${h}" target="_blank" rel="noopener noreferrer">⛓ ${h.slice(0,10)}…${h.slice(-6)}</a>`
         ).join(' ')}</div>`;
       }
       if (!topFindings.length) html = '<div style="color:#64748b;font-size:0.8rem">No results</div>';
@@ -696,6 +709,11 @@ function handleUpdate(data) {
       document.getElementById('answerCard').style.display = 'block';
       document.getElementById('newSearchBtn').style.display = 'block';
       updateSpend(res.claudeCostUsd ?? null);
+      const g = res.guardrails;
+      if (g) {
+        if (g.injectionFlags) log(`${g.injectionFlags} source(s) contained instruction-like text and were treated as untrusted`, 'warn');
+        if (g.ungroundedCitations?.length) log(`${g.ungroundedCitations.length} citation(s) not found in retrieved sources were unlinked`, 'warn');
+      }
       log('Analysis complete — see your results above', 'success');
       break;
     }
@@ -753,7 +771,7 @@ function renderMarkdown(text) {
     let l = line
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
       // links
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
       // bold
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       // italic
