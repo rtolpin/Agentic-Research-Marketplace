@@ -90,7 +90,7 @@ export function groundCitations(answer: string, sourceUrls: string[]): { answer:
 }
 
 // Decision areas where the answer should carry a professional-advice notice.
-const REGULATED_TOPICS = /\b(invest(ing|ment)?|stocks?|crypto|portfolio|retire(ment)?|mortgage|loan|tax(es)?|legal|lawsuit|sue|contract|visa|immigration|medical|medication|diagnos\w*|symptoms?|treatment|health)\b/i;
+const REGULATED_TOPICS = /\b(invest(ing|ment)?|stocks?|crypto|portfolio|retire(ment)?|mortgage|loan|tax(es)?|buy or rent|rent or buy|real estate|housing market|property|home ?buying|buy(ing)? (a )?(home|house|condo|apartment)|legal|lawsuit|sue|contract|visa|immigration|medical|medication|diagnos\w*|symptoms?|treatment|health)\b/i;
 
 export const ADVICE_NOTICE = '_This analysis is for research purposes only and is not financial, legal, tax or medical advice. Consult a qualified professional before acting on it._';
 

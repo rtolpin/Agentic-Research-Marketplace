@@ -136,6 +136,8 @@ describe('untrusted content', () => {
   test('advice notice triggers on regulated topics only', () => {
     assert.ok(needsAdviceNotice('Is it a good time to invest in EV stocks?'));
     assert.ok(needsAdviceNotice('Buy or rent in Miami given mortgage rates?'));
+    assert.ok(needsAdviceNotice('Is it better to buy or rent in Miami right now?'));
+    assert.ok(needsAdviceNotice('Should I buy a condo in Austin?'));
     assert.ok(!needsAdviceNotice('Where can I buy a nice suit in New York?'));
     assert.ok(!needsAdviceNotice('Go or Rust for my backend?'));
   });
